@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Todo Section</title>
+    <style>
+        body {
+            background-color: lightblue;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: lightgray;
+        }
+
+        .color-cell {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        .color-in-progress {
+            background-color: green;
+        }
+
+        .color-complete {
+            background-color: yellow;
+        }
+        .color-not-started {
+            background-color: red;
+        }
+
+
+        .new-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 40px;
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Task Details</h1>
+
+    <table>
+        <tr>
+            <th></th>
+            <th>Task</th>
+            <th>Category</th>
+            <th>Color</th>
+            <th>Status</th>
+        </tr>
+        {% for task in tasks %}
+        <tr data-task-id="{{ task.id }}">
+            <td><input type="checkbox" id="checkbox{{ task.id }}" class="task-checkbox"></td>
+            <td>{{ task.name }}</td>
+            <td>{{ task.category }}</td>
+            <td><span class="new-indicator color-cell {% if task.status.name == 'In Progress' %}color-in-progress{% elif task.status.name == 'Complete' %}color-complete{% elif task.status.name == "Not Started" %}color-not-started{% endif %}" id="colorCell{{ task.id }}"></span></td>
+            <td class="status-cell">{{ task.status }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <br>
+
+    <table id="new-todo-section">
+        <h1>New Todo Section</h1>
+        <tr>
+            <th>Task</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </table>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $(".task-checkbox").on("click", function() {
+                var isChecked = $(this).is(":checked");
+
+                if (isChecked) {
+                    $("#new-todo-section").removeClass("show");
+                } else {
+                    $("#new-todo-section").addClass("show");
+                }
+
+                updateSelectedTasksTable();
+            });
+
+            function updateSelectedTasksTable() {
+                $(".task-checkbox:checked").each(function() {
+                    var taskId = $(this).closest("tr").attr("data-task-id");
+                    var taskName = $(this).closest("tr").find("td:nth-child(2)").text();
+                    var taskStatus = $(this).closest("tr").find(".status-cell").text();
+
+                    var newRow = $("<tr>");
+                    newRow.append($("<td>").text(taskName));
+                    newRow.append($("<td>").text(taskStatus="New"));
+                    newRow.append($("<td>").html('<button class="change-status-button">Change Status</button>'));
+                    $("#new-todo-section").append(newRow);
+                });
+            }
+
+            function setColorCell(status, colorCellId) {
+                var colorClass = "";
+
+                if (status === "Complete") {
+                    colorClass = "color-complete";
+                } else if (status === "in progress") {
+                    colorClass = "color-in-progress";
+                }
+
+                $("#" + colorCellId).addClass(colorClass);
+            }
+
+            {% for task in tasks %}
+                setColorCell("{{ task.status }}", "colorCell{{ task.id }}");
+            {% endfor %}
+
+            $(document).on("click", ".change-status-button", function() {
+                var row = $(this).closest("tr");
+                var statusCell = row.find("td:nth-child(2)");
+                var currentStatus = statusCell.text();
+
+                var newStatus = "";
+
+                if (currentStatus === "Complete") {
+                    newStatus = "In Progress";
+                } else if (currentStatus === "In Progress") {
+                    newStatus = "New";
+                } else {
+                    newStatus = "Complete";
+                }
+
+                statusCell.text(newStatus);
+
+                var colorCell = row.find(".color-cell");
+                colorCell.removeClass("color-complete color-in-progress");
+                if (newStatus === "Complete") {
+                    colorCell.addClass("color-complete");
+                } else if (newStatus === "In Progress") {
+                    colorCell.addClass("color-in-progress");
+                }
+            });
+
+            $(document).on("click", ".add-note-button", function() {
+                var row = $(this).closest("tr");
+                var taskId = row.attr("data-task-id");
+                var noteText = prompt("Enter note:");
+
+                $.ajax({
+                    url: "save-note.php",
+                    method: "POST",
+                    data: {
+                        taskId: taskId,
+                        noteText: noteText
+                    },
+                    success: function(response) {
+                        var noteCell = row.find(".note-cell");
+                        noteCell.text(noteText);
+                    },
+                    error: function(error) {
+                        console.error("Error saving note: ", error);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
